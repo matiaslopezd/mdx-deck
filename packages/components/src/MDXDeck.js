@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { Router, globalHistory, navigate, Link } from '@reach/router'
 import { Swipeable } from 'react-swipeable'
@@ -45,6 +45,112 @@ const BaseWrapper = props => <>{props.children}</>
 
 const inputElements = ['INPUT', 'TEXTAREA', 'A', 'BUTTON']
 
+/* state
+ * - slides
+ * - step
+ * - mode
+ * - update
+ */
+
+const getIndex = () => {
+  const { pathname } = globalHistory.location
+  return Number(pathname.split('/')[1] || 0)
+}
+
+export const MDXDeck = props => {
+  const [mode, setMode] = useState(NORMAL)
+  const { slides } = props
+
+  let index = getIndex()
+
+  const goto = i => {
+    const reverse = i < index
+    navigate('/' + i)
+    // getMeta(i)
+  }
+  const previous = () => {
+    index = getIndex()
+    const n = index - 1
+    if (n < 0) return
+    goto(n)
+  }
+  const next = () => {
+    index = getIndex()
+    const n = index + 1
+    if (n > slides.length - 1) return
+    goto(n)
+  }
+
+  const register = (i, meta) => {}
+
+  const context = {
+    mode,
+    index,
+    register,
+  }
+
+  useEffect(() => {
+    const handleKeydown = e => {
+      console.log(e)
+      switch (e.keyCode) {
+        case keys.left:
+          e.preventDefault()
+          previous()
+          break
+        case keys.right:
+        case keys.space:
+          e.preventDefault()
+          next()
+          break
+      }
+    }
+    window.addEventListener('keydown', handleKeydown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeydown)
+    }
+  }, [])
+
+  const [FirstSlide] = slides
+  let Wrapper = BaseWrapper
+
+  switch (mode) {
+    case PRESENTER:
+      Wrapper = Presenter
+      break
+    case OVERVIEW:
+      Wrapper = Overview
+      break
+    case GRID:
+      Wrapper = Grid
+      break
+  }
+
+  return (
+    <Provider {...props} mode={mode} index={index}>
+      <Catch>
+        <GoogleFonts />
+        <Wrapper mode={mode} modes={modes} index={index}>
+          <Swipeable onSwipedRight={previous} onSwipedLeft={next}>
+            <Router>
+              <Slide path="/" index={0} {...context}>
+                <FirstSlide path="/" />
+              </Slide>
+              {slides.map((Component, i) => (
+                <Slide key={i} path={i + '/*'} index={i} {...context}>
+                  <Component path={i + '/*'} />
+                </Slide>
+              ))}
+              <Print path="/print" {...props} />
+            </Router>
+          </Swipeable>
+        </Wrapper>
+      </Catch>
+    </Provider>
+  )
+}
+
+/*
 export class MDXDeck extends React.Component {
   constructor(props) {
     super(props)
@@ -260,6 +366,7 @@ export class MDXDeck extends React.Component {
     )
   }
 }
+*/
 
 MDXDeck.propTypes = {
   slides: PropTypes.array.isRequired,
